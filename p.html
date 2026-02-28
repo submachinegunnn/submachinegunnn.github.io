@@ -6,50 +6,30 @@
     <style>
         :root { --bg: #050505; --accent: #A020F0; --panel: #111; --text: #eee; }
         body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow: hidden; }
-        
         .browser-ui { display: flex; flex-direction: column; height: 100vh; }
-        
-        /* Tab Bar */
         .tab-bar { display: flex; background: #000; padding: 8px 10px 0; gap: 5px; align-items: center; border-bottom: 1px solid #222; }
-        .tab { 
-            background: var(--panel); padding: 8px 15px; border-radius: 6px 6px 0 0; 
-            font-size: 12px; cursor: pointer; border: 1px solid #222; border-bottom: none; 
-            min-width: 140px; display: flex; justify-content: space-between; align-items: center;
-            transition: background 0.2s;
-        }
+        .tab { background: var(--panel); padding: 8px 15px; border-radius: 6px 6px 0 0; font-size: 12px; cursor: pointer; border: 1px solid #222; border-bottom: none; min-width: 140px; display: flex; justify-content: space-between; align-items: center; }
         .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
-        .add-tab { background: none; border: none; color: white; cursor: pointer; font-size: 22px; padding-bottom: 5px; line-height: 1; }
-
-        /* Nav Bar */
         .nav-bar { display: flex; padding: 10px; gap: 10px; background: var(--panel); align-items: center; border-bottom: 1px solid #222; }
         input { flex: 1; background: #000; border: 1px solid #333; color: white; padding: 10px 20px; border-radius: 20px; outline: none; }
-        input:focus { border-color: var(--accent); }
-        
-        /* Status Indicator */
-        .status-box { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-left: auto; padding-right: 10px; }
-        #status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; transition: 0.3s; }
-
-        /* Iframe Container */
+        .status-box { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-left: auto; padding-right: 10px; cursor: pointer; }
+        #status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; }
         .view-container { flex: 1; position: relative; background: white; }
-        iframe { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            border: none; display: none; background: white; z-index: 1;
-        }
+        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none; background: white; z-index: 1; }
         iframe.active { display: block; z-index: 10; }
     </style>
 </head>
 <body>
     <div class="browser-ui">
         <div class="tab-bar" id="tab-bar">
-            <button class="add-tab" onclick="createNewTab()">+</button>
-            <div class="status-box">
+            <button onclick="createNewTab()" style="background:none;border:none;color:white;cursor:pointer;font-size:20px;">+</button>
+            <div class="status-box" onclick="location.reload()">
                 <div id="status-dot"></div>
                 <span id="status-text">Proxy Offline</span>
             </div>
         </div>
         <div class="nav-bar">
-            <button onclick="reloadCurrent()" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">🔄</button>
-            <input type="text" id="url-input" placeholder="Search or type a URL...">
+            <input type="text" id="url-input" placeholder="Enter URL and press Enter...">
         </div>
         <div id="view-container" class="view-container"></div>
     </div>
@@ -58,126 +38,77 @@
     <script src="/uv.config.js"></script>
     
     <script>
-        let tabCount = 0;
-        const urlInput = document.getElementById('url-input');
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
         async function initProxy() {
             if ('serviceWorker' in navigator) {
                 try {
-                    // Register the root service worker
-                    const reg = await navigator.serviceWorker.register('/uv.sw.js', { 
+                    // Force unregister old workers that might be stuck
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for(let reg of registrations) {
+                        if (reg.active && !navigator.serviceWorker.controller) {
+                            console.log("Cleaning stuck worker...");
+                            await reg.unregister();
+                        }
+                    }
+
+                    const registration = await navigator.serviceWorker.register('/uv.sw.js', { 
                         scope: __uv$config.prefix 
                     });
 
-                    // Check if already controlled
                     if (navigator.serviceWorker.controller) {
-                        setProxyReady();
+                        statusDot.style.background = '#00ff88';
+                        statusText.innerText = 'Proxy Ready';
                     } else {
                         statusText.innerText = 'Syncing...';
                         
-                        // Listen for the controller change (activation)
+                        // Listen for activation
                         navigator.serviceWorker.addEventListener('controllerchange', () => {
-                            setProxyReady();
+                            window.location.reload();
                         });
 
-                        // One-time safety reload if it's been syncing too long
-                        const lastSync = sessionStorage.getItem('uv_sync_attempt');
-                        if (!lastSync) {
-                            sessionStorage.setItem('uv_sync_attempt', 'true');
-                            setTimeout(() => {
-                                if (!navigator.serviceWorker.controller) window.location.reload();
-                            }, 2000);
+                        // If it's already active, we just need a refresh to claim it
+                        if (registration.active) {
+                            console.log("Worker active but not controlling. Refreshing...");
+                            window.location.reload();
                         }
                     }
                 } catch (err) {
                     statusText.innerText = 'Proxy Error';
-                    console.error(err);
+                    console.error("SW Error:", err);
                 }
             }
         }
 
-        function setProxyReady() {
-            statusDot.style.background = '#00ff88';
-            statusDot.style.boxShadow = '0 0 8px #00ff88';
-            statusText.innerText = 'Proxy Ready';
-        }
-
-        function createNewTab() {
-            tabCount++;
-            const id = `frame-${tabCount}`;
-            const tab = document.createElement('div');
-            tab.className = 'tab';
-            tab.id = `tab-${id}`;
-            tab.innerHTML = `<span>New Tab</span> <span style="margin-left:10px; opacity:0.6;" onclick="closeTab(event, '${id}')">×</span>`;
-            tab.onclick = () => switchTab(id);
-            document.getElementById('tab-bar').insertBefore(tab, document.querySelector('.add-tab'));
-
-            const frame = document.createElement('iframe');
-            frame.id = id;
-            frame.src = 'about:blank';
-            document.getElementById('view-container').appendChild(frame);
-            switchTab(id);
-        }
-
-        function switchTab(id) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
-            
-            const activeTab = document.getElementById(`tab-${id}`);
-            const activeFrame = document.getElementById(id);
-            if (activeTab && activeFrame) {
-                activeTab.classList.add('active');
-                activeFrame.classList.add('active');
-                urlInput.value = activeFrame.dataset.url || '';
-            }
-        }
-
-        function closeTab(e, id) {
-            e.stopPropagation();
-            const tab = document.getElementById(`tab-${id}`);
-            const frame = document.getElementById(id);
-            if(tab) tab.remove();
-            if(frame) frame.remove();
-            const tabs = document.querySelectorAll('.tab');
-            if (tabs.length > 0) switchTab(tabs[tabs.length-1].id.replace('tab-', ''));
-        }
-
-        function reloadCurrent() {
-            const frame = document.querySelector('iframe.active');
-            if (frame) frame.contentWindow.location.reload();
-        }
-
-        urlInput.addEventListener('keydown', (e) => {
+        // URL Handling
+        document.getElementById('url-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                let url = urlInput.value.trim();
-                if (!url) return;
-
-                if (!url.includes('.') || url.includes(' ')) {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-                } else if (!url.startsWith('http')) {
-                    url = 'https://' + url;
-                }
-
+                let url = e.target.value.trim();
+                if (!url.startsWith('http')) url = 'https://' + url;
+                
                 const frame = document.querySelector('iframe.active');
                 if (frame) {
-                    frame.dataset.url = url;
-                    // Use the Ultraviolet prefix + encoded URL
                     frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
-                    
-                    const tabSpan = document.querySelector(`#tab-${frame.id} span`);
-                    tabSpan.innerText = "Loading...";
-                    
-                    frame.onload = () => {
-                        tabSpan.innerText = url.split('/')[2] || "Loaded";
-                    };
                 }
             }
         });
 
-        window.onload = async () => {
-            await initProxy();
+        function createNewTab() {
+            const id = `frame-${Date.now()}`;
+            const tab = document.createElement('div');
+            tab.className = 'tab active';
+            tab.innerHTML = `New Tab`;
+            document.getElementById('tab-bar').insertBefore(tab, document.querySelector('button'));
+
+            const frame = document.createElement('iframe');
+            frame.id = id;
+            frame.className = 'active';
+            document.getElementById('view-container').appendChild(frame);
+        }
+
+        window.onload = () => {
+            initProxy();
             createNewTab();
         };
     </script>
