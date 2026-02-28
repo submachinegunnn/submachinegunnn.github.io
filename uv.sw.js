@@ -1,13 +1,11 @@
+/* Top of your uv.sw.js */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
-/* This file goes in your ROOT folder */
+/* Your existing imports below */
 importScripts('/uv/uv.bundle.js');
 importScripts('/uv.config.js');
-importScripts('/uv/uv.sw.js'); // <--- This points to the library, NOT the root file.
+importScripts('/uv/uv.sw.js');
 
 const sw = new UVServiceWorker();
-
-self.addEventListener('fetch', (event) => {
-    event.respondWith(sw.fetch(event));
-});
+self.addEventListener('fetch', (event) => event.respondWith(sw.fetch(event)));
