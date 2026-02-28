@@ -3,145 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stealth OS</title>
+    <title>Dashboard | Stealth OS</title>
     <style>
-        :root { --accent: #A020F0; --bg: #050505; --panel: #111; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        :root { --accent: #A020F0; --bg: #050505; --panel: #111; --text: #eee; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        /* Main Viewport for Iframes */
-        .content-wrapper { width: 100vw; height: 100vh; position: relative; }
-        iframe { width: 100%; height: 100%; border: none; display: none; background: var(--bg); }
-        iframe.active { display: block; }
-
-        /* Floating Action Button (Bottom Left) */
-        .menu-container {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            z-index: 9999;
+        /* Dashboard Grid Layout */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+            height: 100vh;
+            align-content: center;
+            transition: filter 0.3s ease;
         }
 
-        .main-fab {
-            width: 60px;
-            height: 60px;
-            background: var(--accent);
-            border-radius: 50%;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
+        .card {
+            background: var(--panel);
+            border: 1px solid #222;
+            border-radius: 16px;
+            padding: 25px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(160, 32, 240, 0.4);
-            transition: transform 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: 0.3s;
+            text-align: center;
         }
 
-        .main-fab:hover { transform: scale(1.1); }
+        .card:hover { border-color: var(--accent); transform: translateY(-5px); }
+        .card .icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .card h2 { margin: 0; font-size: 1.2rem; }
+
+        /* Full-Screen App Layer */
+        .app-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg);
+            z-index: 50;
+            display: none;
+        }
+        .app-layer.active { display: block; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* Floating Menu (Bottom Left) */
+        .menu-container { position: fixed; bottom: 30px; left: 30px; z-index: 100; }
+        
+        .main-fab {
+            width: 60px; height: 60px; background: var(--accent);
+            border-radius: 50%; border: none; color: white;
+            font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 15px rgba(160,32,240,0.4);
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
         .main-fab.open { transform: rotate(45deg); background: #333; }
 
-        /* Expanding Options */
         .fab-options {
-            position: absolute;
-            bottom: 70px;
-            left: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateY(20px);
+            position: absolute; bottom: 75px; left: 0;
+            display: flex; flex-direction: column; gap: 12px;
+            opacity: 0; transform: translateY(20px); pointer-events: none;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        .fab-options.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
-        .fab-options.show {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
+        .opt-btn {
+            width: 50px; height: 50px; background: var(--panel); border: 1px solid #333;
+            border-radius: 50%; color: white; cursor: pointer; font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
-
-        .option-btn {
-            width: 50px;
-            height: 50px;
-            background: var(--panel);
-            border: 1px solid #333;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: 0.2s;
-        }
-
-        .option-btn:hover {
-            background: var(--accent);
-            border-color: var(--accent);
-            transform: translateX(5px);
-        }
-
-        /* Tooltip style labels */
-        .option-btn::after {
-            content: attr(data-label);
-            position: absolute;
-            left: 60px;
-            background: rgba(0,0,0,0.8);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: 0.2s;
-        }
-        .option-btn:hover::after { opacity: 1; }
+        .opt-btn:hover { background: var(--accent); transform: translateX(5px); }
     </style>
 </head>
 <body>
 
+<div class="dashboard-container" id="main-grid">
+    <div class="card" onclick="openApp('ai')">
+        <div class="icon">🤖</div>
+        <h2>Neural AI</h2>
+    </div>
+    <div class="card" onclick="openApp('proxy')">
+        <div class="icon">🌐</div>
+        <h2>Web Proxy</h2>
+    </div>
+    <div class="card" onclick="openApp('music')">
+        <div class="icon">🎵</div>
+        <h2>Audio Hub</h2>
+    </div>
+    <div class="card" onclick="openApp('settings')">
+        <div class="icon">⚙️</div>
+        <h2>Settings</h2>
+    </div>
+</div>
+
 <div class="menu-container">
     <div class="fab-options" id="fab-menu">
-        <button class="option-btn" data-label="Settings" onclick="loadPage('settings')">⚙️</button>
-        <button class="option-btn" data-label="Proxy" onclick="loadPage('proxy')">🌐</button>
-        <button class="option-btn" data-label="Music" onclick="loadPage('music')">🎵</button>
-        <button class="option-btn" data-label="AI Chat" onclick="loadPage('ai')">🤖</button>
-        <button class="option-btn" data-label="Home" onclick="loadPage('home')">🏠</button>
+        <button class="opt-btn" title="Settings" onclick="openApp('settings')">⚙️</button>
+        <button class="opt-btn" title="Proxy" onclick="openApp('proxy')">🌐</button>
+        <button class="opt-btn" title="Music" onclick="openApp('music')">🎵</button>
+        <button class="opt-btn" title="AI Chat" onclick="openApp('ai')">🤖</button>
+        <button class="opt-btn" title="Dashboard" onclick="closeApp()">🏠</button>
     </div>
     <button class="main-fab" id="main-btn" onclick="toggleMenu()">🏠</button>
 </div>
 
-<div class="content-wrapper">
-    <iframe id="frame-home" class="active" src="dashboard.html"></iframe>
-    <iframe id="frame-ai" src="a.html"></iframe>
-    <iframe id="frame-music" src="m.html"></iframe>
-    <iframe id="frame-proxy" src="p.html"></iframe>
-    <iframe id="frame-settings" src="settings.html"></iframe>
+<div class="app-layer" id="app-layer">
+    <iframe id="app-frame" src=""></iframe>
 </div>
 
 <script>
+    const menu = document.getElementById('fab-menu');
+    const btn = document.getElementById('main-btn');
+    const layer = document.getElementById('app-layer');
+    const frame = document.getElementById('app-frame');
+    const grid = document.getElementById('main-grid');
+
     function toggleMenu() {
-        const menu = document.getElementById('fab-menu');
-        const btn = document.getElementById('main-btn');
         menu.classList.toggle('show');
         btn.classList.toggle('open');
-        // Change icon to 'X' when open
         btn.innerText = btn.classList.contains('open') ? '✕' : '🏠';
     }
 
-    function loadPage(id) {
-        // Hide all frames
-        document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
-        // Show selected frame
-        document.getElementById('frame-' + id).classList.add('active');
-        // Close menu after selection
-        toggleMenu();
+    function openApp(id) {
+        const urls = {
+            'ai': 'ai.html',
+            'music': 'music.html',
+            'settings': 'settings.html',
+            'proxy': 'https://your-render-proxy.onrender.com' // Replace with your Render URL
+        };
+
+        if (urls[id]) {
+            frame.src = urls[id];
+            layer.classList.add('active');
+            grid.style.filter = "blur(10px)"; // Cool stealth effect
+            if(menu.classList.contains('show')) toggleMenu();
+        }
     }
 
-    // Close menu if user clicks outside
-    window.onclick = function(event) {
-        if (!event.target.matches('.main-fab') && !event.target.matches('.option-btn')) {
-            document.getElementById('fab-menu').classList.remove('show');
-            const btn = document.getElementById('main-btn');
+    function closeApp() {
+        layer.classList.remove('active');
+        frame.src = "";
+        grid.style.filter = "none";
+        if(menu.classList.contains('show')) toggleMenu();
+    }
+
+    // Close menu on outside click
+    window.onclick = (e) => {
+        if (!e.target.closest('.menu-container')) {
+            menu.classList.remove('show');
             btn.classList.remove('open');
             btn.innerText = '🏠';
         }
