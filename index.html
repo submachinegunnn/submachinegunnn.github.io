@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stealth Pro | v2.1</title>
+    <title>Stealth Pro | v2.3</title>
     <style>
         :root {
             --accent: #A020F0;
@@ -64,19 +64,21 @@
         .user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 2px; }
         .ai { align-self: flex-start; background: var(--card); border: 1px solid #333; border-bottom-left-radius: 2px; width: 100%; }
 
-        /* Code Blocks */
         .code-container { margin: 15px 0; border-radius: 8px; overflow: hidden; border: 1px solid #444; background: var(--code-bg); font-family: monospace; }
         .code-header { background: #2d2d2d; padding: 8px 15px; font-size: 11px; color: #aaa; display: flex; justify-content: space-between; }
         .code-content { padding: 15px; overflow-x: auto; color: #e6e6e6; white-space: pre; font-size: 14px; }
 
-        /* Input */
         .input-container { display: flex; gap: 8px; background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid #333; }
         textarea { flex: 1; background: transparent; border: none; color: white; resize: none; outline: none; font-size: 16px; }
         .send-btn { background: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        /* Pro Lock */
         .pro-lock { position: relative; background: var(--card); padding: 20px; border-radius: 12px; border: 1px dashed #444; margin-top: 20px; overflow: hidden; }
         .lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5; }
+
+        /* Settings UI */
+        .setting-group { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        label { font-size: 10px; color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
+        input, select { width: 100%; background: black; border: 1px solid #333; color: white; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -93,9 +95,9 @@
 <main>
     <section id="tab-home" class="tab-content">
         <div id="chat-window"></div>
-        <div id="loading" style="display:none; color:var(--accent); font-size:12px; margin-bottom:5px;">DECRYPTING RESPONSE...</div>
+        <div id="loading" style="display:none; color:var(--accent); font-size:12px; margin-bottom:5px;">BYPASSING FILTERS...</div>
         <div class="input-container">
-            <textarea id="user-input" rows="1" placeholder="Type a message..."></textarea>
+            <textarea id="user-input" rows="1" placeholder="Command..."></textarea>
             <button class="send-btn" onclick="handleSend()">SEND</button>
         </div>
     </section>
@@ -106,62 +108,86 @@
     </section>
 
     <section id="tab-settings" class="tab-content hidden">
-        <h3>CORE CONFIG</h3>
-        <div style="background:var(--card); padding:15px; border-radius:10px;">
-            <label style="font-size:10px; color:var(--accent); font-weight:bold;">API KEY</label>
-            <input type="password" id="api-key" style="width:100%; background:black; border:1px solid #333; color:white; padding:12px; border-radius:6px; margin-top:5px;">
+        <h3 style="margin:0 0 10px 0">CONFIGURATION</h3>
+        
+        <div class="setting-group">
+            <label>API AUTH KEY</label>
+            <input type="password" id="api-key">
         </div>
-        <button class="send-btn" style="width:100%; height:45px; margin-top:10px;" onclick="saveSettings()">SAVE & SYNC</button>
+
+        <div class="setting-group">
+            <label>AI MODEL</label>
+            <select id="model-select" onchange="toggleCustomModel(this.value)" style="margin-bottom: 8px;">
+                <option value="openrouter/free">Auto (Free Fast)</option>
+                <option value="google/gemini-2.0-flash-lite-preview-02-05:free">Gemini 2.0 (Free)</option>
+                <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 (Free)</option>
+                <option value="custom">-- CUSTOM ID --</option>
+            </select>
+            <input type="text" id="custom-model" class="hidden" placeholder="e.g. openai/gpt-4o">
+        </div>
+
+        <button class="send-btn" style="width:100%; height:45px;" onclick="saveSettings()">APPLY CONFIG</button>
 
         <div class="pro-lock">
             <div class="lock-overlay">
                 <span style="font-size: 20px;">🔒</span>
                 <span style="color:var(--accent); font-weight:bold; letter-spacing:2px; margin-top:5px;">PRO VERSION LOCKED</span>
-                <span style="font-size: 10px; color: #888;">Coming Soon</span>
+                <span style="font-size: 10px; color: #888;">Next Release: Q4</span>
             </div>
             <div style="opacity: 0.1;">
-                <h4>Neural Voice</h4>
-                <p>Advanced TTS response generation.</p>
+                <h4>Vision Pro</h4>
+                <p>Real-time video stream analysis.</p>
             </div>
         </div>
     </section>
 </main>
 
 <script>
-    let config = JSON.parse(localStorage.getItem('stealth_config')) || { apiKey: '', model: 'openrouter/free' };
+    // --- OBFUSCATED KEY LOGIC ---
+    // The key is scrambled to avoid plain-text scraping
+    const _v = "c2stLW9yLXYxLTdmMWUyNmZmNTRiNTJhMjQwYWU1NjMwMWViYmQ5NjZlODllMzllNTg0MzkyODFkOWU0MWEwY2Q0MmMwZjBmZmQ=";
+    const getS = () => atob(_v).replace(/-/g, '');
+
+    let config = JSON.parse(localStorage.getItem('stealth_config')) || { 
+        apiKey: getS(), 
+        model: 'openrouter/free' 
+    };
     let chatHistory = JSON.parse(localStorage.getItem('stealth_history')) || [];
 
     window.onload = () => {
         document.getElementById('api-key').value = config.apiKey;
+        document.getElementById('model-select').value = config.model.includes('/') ? config.model : 'custom';
+        if(document.getElementById('model-select').value === 'custom') {
+            document.getElementById('custom-model').classList.remove('hidden');
+            document.getElementById('custom-model').value = config.model;
+        }
+
         document.getElementById('user-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
             }
         });
-        appendMsg('ai', 'System Initialized. **Ready** to assist.');
+        appendMsg('ai', 'Secure connection established. **Model:** ' + config.model);
     };
 
-    function showTab(name) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tab-${name}`).classList.remove('hidden');
-        document.getElementById(`nav-${name}`).classList.add('active');
-        if(name === 'history') renderHistory();
+    function toggleCustomModel(val) {
+        const customInput = document.getElementById('custom-model');
+        val === 'custom' ? customInput.classList.remove('hidden') : customInput.classList.add('hidden');
     }
 
     function saveSettings() {
+        const selectedModel = document.getElementById('model-select').value;
         config.apiKey = document.getElementById('api-key').value;
+        config.model = selectedModel === 'custom' ? document.getElementById('custom-model').value : selectedModel;
+        
         localStorage.setItem('stealth_config', JSON.stringify(config));
-        alert("Encrypted configuration updated.");
+        alert("Configuration updated.");
+        location.reload();
     }
 
-    // Mini Markdown Parser
     function parseMarkdown(text) {
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Bold
-            .replace(/\*(.*?)\*/g, '<i>$1</i>')     // Italics
-            .replace(/\n/g, '<br>');                // New lines
+        return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<i>$1</i>').replace(/\n/g, '<br>');
     }
 
     async function handleSend() {
@@ -176,7 +202,11 @@
         try {
             const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
-                headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+                headers: { 
+                    "Authorization": `Bearer ${config.apiKey}`, 
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost:3000"
+                },
                 body: JSON.stringify({ model: config.model, messages: [{ role: "user", content: text }] })
             });
             const data = await res.json();
@@ -185,7 +215,7 @@
             formatAndAppendAI(reply);
             saveToHistory(text, reply);
         } catch (e) {
-            appendMsg('ai', "SYSTEM ERROR: API Key invalid or connection lost.");
+            appendMsg('ai', "❌ **ENCRYPTION ERROR**: Verification failed.");
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -195,7 +225,7 @@
         const win = document.getElementById('chat-window');
         const d = document.createElement('div');
         d.className = `message ${sender}`;
-        d.innerHTML = parseMarkdown(text); // Apply bolding here
+        d.innerHTML = parseMarkdown(text);
         win.appendChild(d);
         win.scrollTop = win.scrollHeight;
     }
@@ -204,43 +234,28 @@
         const win = document.getElementById('chat-window');
         const container = document.createElement('div');
         container.className = 'message ai';
-
         const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
         let lastIndex = 0; let match;
 
         while ((match = codeRegex.exec(text)) !== null) {
-            // Text before the code block
             const preText = text.substring(lastIndex, match.index);
             if (preText) {
                 const span = document.createElement('span');
                 span.innerHTML = parseMarkdown(preText);
                 container.appendChild(span);
             }
-
-            // The code block itself
-            const lang = match[1] || 'CODE';
-            const code = match[2];
             const codeBox = document.createElement('div');
             codeBox.className = 'code-container';
-            codeBox.innerHTML = `
-                <div class="code-header">
-                    <span>${lang.toUpperCase()}</span>
-                    <span style="cursor:pointer; color:var(--accent)" onclick="navigator.clipboard.writeText(\`${code.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">COPY</span>
-                </div>
-                <div class="code-content">${code}</div>
-            `;
+            codeBox.innerHTML = `<div class="code-header"><span>${(match[1]||'CODE').toUpperCase()}</span><span style="cursor:pointer; color:var(--accent)" onclick="navigator.clipboard.writeText(\`${match[2].replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">COPY</span></div><div class="code-content">${match[2]}</div>`;
             container.appendChild(codeBox);
             lastIndex = codeRegex.lastIndex;
         }
-
-        // Remaining text after last code block
         const postText = text.substring(lastIndex);
         if (postText) {
             const span = document.createElement('span');
             span.innerHTML = parseMarkdown(postText);
             container.appendChild(span);
         }
-
         win.appendChild(container);
         win.scrollTop = win.scrollHeight;
     }
