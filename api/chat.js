@@ -1,24 +1,28 @@
-// api/chat.js
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
 
-    const { model, messages } = req.body;
+// Initialize the OpenRouter provider
+const openrouter = createOpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": process.env.VERCEL_URL || "http://localhost:3000",
-                "X-Title": "Stealth Pro Secure"
-            },
-            body: JSON.stringify({ model, messages })
-        });
+export const config = {
+  runtime: 'edge', // This makes streaming near-instant
+};
 
-        const data = await response.json();
-        res.status(200).json(data);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to connect to OpenRouter' });
-    }
+export default async function handler(req) {
+  const { model, messages } = await req.json();
+
+  const result = await streamText({
+    model: openrouter(model || 'openrouter/auto'),
+    messages: messages,
+    headers: {
+      "HTTP-Referer": process.env.VERCEL_URL || "http://localhost:3000",
+      "X-Title": "Stealth Pro Secure",
+    },
+  });
+
+  // Returns the specialized stream format that the AI SDK uses
+  return result.toDataStreamResponse();
 }
