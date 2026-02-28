@@ -13,7 +13,7 @@ app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
     // We use a try/catch or check to prevent a crash if the file is missing
-    const indexPath = path.join(__dirname, 'home.html');
+    const indexPath = path.join(__dirname, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
             res.status(500).send("Server is running, but index.html was not found in the root folder.");
