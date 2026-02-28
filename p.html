@@ -63,49 +63,53 @@
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
+        // 2. The Smart Registration Logic
         async function initProxy() {
-    if ('serviceWorker' in navigator) {
-        try {
-            const registration = await navigator.serviceWorker.register('/uv.sw.js', { 
-                scope: __uv$config.prefix 
-            });
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/uv.sw.js', { 
+                        scope: __uv$config.prefix 
+                    });
 
-            // If we are already in control, just show the green dot
-            if (navigator.serviceWorker.controller) {
-                setProxyReady();
-            } else {
-                statusText.innerText = 'Syncing Engine...';
-                
-                // Check a "sessionStorage" flag so we don't loop forever
-                if (!sessionStorage.getItem('sw_attempted')) {
-                    sessionStorage.setItem('sw_attempted', 'true');
-                    
-                    // Wait for the worker to be ready before refreshing
-                    registration.onupdatefound = () => {
-                        const installingWorker = registration.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'activated') {
+                    // If we're already being controlled, go green!
+                    if (navigator.serviceWorker.controller) {
+                        setProxyReady();
+                    } else {
+                        statusText.innerText = 'Syncing...';
+                        
+                        // Time-based lock to prevent infinite reloading
+                        const lastReload = localStorage.getItem('uv_last_reload');
+                        const now = Date.now();
+
+                        // Only reload if we haven't done so in the last 3 seconds
+                        if (!lastReload || (now - lastReload > 3000)) {
+                            localStorage.setItem('uv_last_reload', now);
+                            
+                            // If worker is active, refresh to let it take control
+                            if (registration.active) {
                                 window.location.reload();
+                            } else {
+                                // If it's still installing, wait for it to finish then refresh
+                                registration.onupdatefound = () => {
+                                    const sw = registration.installing;
+                                    sw.onstatechange = () => {
+                                        if (sw.state === 'activated') window.location.reload();
+                                    }
+                                }
                             }
-                        };
-                    };
-                    
-                    // If it's already active but not controlling, reload now
-                    if (registration.active) {
-                        window.location.reload();
+                        } else {
+                            // If we reloaded too recently, just wait for the 'controllerchange' event
+                            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                                setProxyReady();
+                            });
+                        }
                     }
-                } else {
-                    // If we already tried reloading and it's still not ready
-                    statusText.innerText = 'Click 🔄 to Finish';
-                    statusDot.style.background = '#ff8800'; // Orange for "almost there"
+                } catch (err) {
+                    statusText.innerText = 'Proxy Error';
+                    console.error("SW Register Error:", err);
                 }
             }
-        } catch (err) {
-            statusText.innerText = 'Proxy Error';
-            console.error(err);
         }
-    }
-}
 
         function setProxyReady() {
             statusDot.style.background = '#00ff88';
@@ -171,8 +175,8 @@
                 const frame = document.querySelector('iframe.active');
                 if (frame) {
                     frame.dataset.url = url;
-                    const encoded = __uv$config.prefix + __uv$config.encodeUrl(url);
-                    frame.src = encoded;
+                    // Apply encoded URL
+                    frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
                     
                     const tabSpan = document.querySelector(`#tab-${frame.id} span`);
                     tabSpan.innerText = "Loading...";
