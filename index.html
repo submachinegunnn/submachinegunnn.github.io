@@ -221,36 +221,45 @@
     }
 
     async function handleSend() {
-        const input = document.getElementById('user-input');
-        const text = input.value.trim();
-        if (!text) return;
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
 
-        appendMsg('user', text);
-        input.value = '';
-        document.getElementById('loading').style.display = 'block';
+    appendMsg('user', text);
+    input.value = '';
+    document.getElementById('loading').style.display = 'block';
 
-        try {
-            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: { 
-                    "Authorization": `Bearer ${activeConfig.apiKey}`, 
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "http://localhost:3000"
-                },
-                body: JSON.stringify({ model: activeConfig.model, messages: [{ role: "user", content: text }] })
-            });
-            const data = await res.json();
+    try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: { 
+                "Authorization": `Bearer ${activeConfig.apiKey}`, 
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:3000"
+            },
+            body: JSON.stringify({ 
+                model: activeConfig.model, 
+                messages: [{ role: "user", content: text }] 
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+            // This pulls the specific error message from OpenRouter
+            appendMsg('ai', `❌ **API ERROR**: ${data.error.message}`);
+        } else {
             const reply = data.choices[0].message.content;
             appendMsg('ai', reply);
-            
             activeHistory.unshift({ user: text, ai: reply, time: new Date().toLocaleTimeString() });
             saveToStorage();
-        } catch (e) {
-            appendMsg('ai', "❌ Signal Lost. Check API Key.");
-        } finally {
-            document.getElementById('loading').style.display = 'none';
         }
+    } catch (e) {
+        appendMsg('ai', "❌ **CONNECTION ERROR**: The request was blocked or timed out.");
+    } finally {
+        document.getElementById('loading').style.display = 'none';
     }
+}
 
     function appendMsg(sender, text) {
         const win = document.getElementById('chat-window');
