@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stealth Pro | v2.4</title>
+    <title>Stealth Pro | v2.5</title>
     <style>
         :root {
             --accent: #A020F0;
@@ -26,14 +26,18 @@
             overflow: hidden;
         }
 
+        /* Login Overlay */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 100; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+
         header {
             background: var(--card);
             border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            z-index: 10;
+            display: flex; justify-content: space-between;
+            align-items: center; padding: 10px 20px; z-index: 10;
         }
 
         .logo { color: var(--accent); font-weight: bold; letter-spacing: 2px; }
@@ -45,45 +49,45 @@
         nav button {
             background: transparent; border: 1px solid transparent;
             color: var(--text); padding: 8px 12px; cursor: pointer; border-radius: 6px; font-size: 1.2rem;
-            transition: 0.2s;
         }
         nav button.active { border-color: var(--accent); color: var(--accent); background: rgba(160, 32, 240, 0.1); }
 
-        main { flex: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; position: relative; }
+        main { flex: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
         .tab-content { display: flex; flex-direction: column; height: 100%; width: 100%; }
         .hidden { display: none !important; }
 
-        #chat-window {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            padding-bottom: 20px;
-        }
+        #chat-window { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; }
 
         .message { max-width: 90%; padding: 12px 16px; border-radius: 12px; line-height: 1.6; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
         .user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 2px; }
         .ai { align-self: flex-start; background: var(--card); border: 1px solid #333; border-bottom-left-radius: 2px; width: 100%; }
 
-        .code-container { margin: 15px 0; border-radius: 8px; overflow: hidden; border: 1px solid #444; background: var(--code-bg); font-family: monospace; }
-        .code-header { background: #2d2d2d; padding: 8px 15px; font-size: 11px; color: #aaa; display: flex; justify-content: space-between; }
-        .code-content { padding: 15px; overflow-x: auto; color: #e6e6e6; white-space: pre; font-size: 14px; }
-
-        .input-container { display: flex; gap: 8px; background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid #333; margin-top: auto; }
-        textarea { flex: 1; background: transparent; border: none; color: white; resize: none; outline: none; font-size: 16px; }
-        .send-btn { background: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        /* Settings UI */
         .setting-group { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
         label { font-size: 10px; color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
-        input, select { width: 100%; background: black; border: 1px solid #333; color: white; padding: 10px; border-radius: 6px; }
+        input, select { width: 100%; background: black; border: 1px solid #333; color: white; padding: 10px; border-radius: 6px; outline: none; }
+        
+        .send-btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .send-btn:hover { opacity: 0.8; }
+        .danger-btn { background: #660000; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
+
+        .auth-card { background: var(--card); padding: 30px; border-radius: 15px; border: 1px solid #333; width: 320px; text-align: center; }
     </style>
 </head>
 <body>
 
+<div id="auth-overlay">
+    <div class="auth-card">
+        <div class="logo" style="font-size: 24px; margin-bottom: 20px;">STEALTH <span class="pro-badge">AUTH</span></div>
+        <div id="login-box">
+            <input type="text" id="username-input" placeholder="Username" style="margin-bottom: 10px;">
+            <button class="send-btn" style="width: 100%;" onclick="handleLogin()">LOGIN / CREATE</button>
+            <p style="font-size: 10px; color: #555; margin-top: 15px;">Profiles are stored locally in this browser.</p>
+        </div>
+    </div>
+</div>
+
 <header>
-    <div class="logo">STEALTH <span class="pro-badge">PRO</span></div>
+    <div class="logo">STEALTH <span class="pro-badge">PRO</span> <span id="user-display" style="font-size: 10px; color: #555;"></span></div>
     <nav>
         <button id="nav-home" class="active" onclick="showTab('home')">💬</button>
         <button id="nav-history" onclick="showTab('history')">📜</button>
@@ -94,130 +98,100 @@
 <main>
     <section id="tab-home" class="tab-content">
         <div id="chat-window"></div>
-        <div id="loading" style="display:none; color:var(--accent); font-size:12px; margin-bottom:5px;">SECURE LINK ACTIVE...</div>
-        <div class="input-container">
-            <textarea id="user-input" rows="1" placeholder="Type message..."></textarea>
+        <div id="loading" style="display:none; color:var(--accent); font-size:12px; margin-bottom:5px;">SECURE CHANNEL...</div>
+        <div style="display:flex; gap:8px; background:var(--card); padding:12px; border-radius:12px; border:1px solid #333;">
+            <textarea id="user-input" rows="1" placeholder="Type..." style="flex:1; background:transparent; border:none; color:white; outline:none; font-size:16px;"></textarea>
             <button class="send-btn" onclick="handleSend()">SEND</button>
         </div>
     </section>
 
     <section id="tab-history" class="tab-content hidden">
-        <h3 style="margin:0 0 15px 0">SESSION LOGS</h3>
+        <h3 style="margin:0 0 15px 0">USER LOGS</h3>
         <div id="history-list" style="overflow-y:auto; flex:1;"></div>
     </section>
 
     <section id="tab-settings" class="tab-content hidden">
-        <h3 style="margin:0 0 10px 0">CONFIGURATION</h3>
-        
+        <h3 style="margin:0 0 10px 0">PREFERENCES</h3>
         <div class="setting-group">
             <label>API AUTH KEY</label>
             <input type="password" id="api-key-input">
         </div>
-
         <div class="setting-group">
-            <label>AI MODEL</label>
-            <select id="model-select" onchange="toggleCustomModel(this.value)">
-                <option value="openrouter/free">Auto (Free Fast)</option>
-                <option value="google/gemini-2.0-flash-lite-preview-02-05:free">Gemini 2.0 (Free)</option>
-                <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 (Free)</option>
-                <option value="custom">-- CUSTOM ID --</option>
-            </select>
-            <input type="text" id="custom-model-input" class="hidden" placeholder="e.g. openai/gpt-4o" style="margin-top:8px;">
+            <label>MODEL ID</label>
+            <input type="text" id="model-id-input">
         </div>
-
-        <button class="send-btn" style="width:100%; height:45px; margin-top:10px;" onclick="saveSettings()">SAVE & REBOOT</button>
+        <button class="send-btn" style="width:100%;" onclick="saveSettings()">SAVE SETTINGS</button>
+        
+        <button class="danger-btn" onclick="clearUserHistory()">🗑️ CLEAR PROFILE HISTORY</button>
+        <button class="danger-btn" style="background:#333;" onclick="logout()">🔓 LOGOUT</button>
     </section>
 </main>
 
 <script>
-    // 1. OBFUSCATED KEY (Decodes at runtime)
+    // --- AUTH & DATA STORAGE ---
+    let currentUser = null;
     const _v = "c2stLW9yLXYxLTdmMWUyNmZmNTRiNTJhMjQwYWU1NjMwMWViYmQ5NjZlODllMzllNTg0MzkyODFkOWU0MWEwY2Q0MmMwZjBmZmQ=";
     const getSecret = () => atob(_v).replace(/-/g, '');
 
-    // 2. CONFIG INITIALIZATION
-    let config = JSON.parse(localStorage.getItem('stealth_config')) || { 
-        apiKey: getSecret(), 
-        model: 'openrouter/free' 
-    };
-    let chatHistory = JSON.parse(localStorage.getItem('stealth_history')) || [];
-
-    window.onload = () => {
-        // Setup initial UI states
-        document.getElementById('api-key-input').value = config.apiKey;
+    function handleLogin() {
+        const user = document.getElementById('username-input').value.trim().toLowerCase();
+        if (!user) return alert("Enter a username");
         
-        const modelSelect = document.getElementById('model-select');
-        const isStandardModel = Array.from(modelSelect.options).some(opt => opt.value === config.model);
+        currentUser = user;
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('user-display').innerText = `@${user}`;
         
-        if (isStandardModel) {
-            modelSelect.value = config.model;
-        } else {
-            modelSelect.value = 'custom';
-            const customInput = document.getElementById('custom-model-input');
-            customInput.classList.remove('hidden');
-            customInput.value = config.model;
-        }
-
-        document.getElementById('user-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-            }
-        });
-
-        appendMsg('ai', 'Interface Loaded. Current Model: **' + config.model + '**');
-    };
-
-    // 3. TAB NAVIGATION (Fixed Logic)
-    function showTab(tabName) {
-        console.log("Switching to tab:", tabName);
-        
-        // Hide all sections
-        const tabs = ['home', 'history', 'settings'];
-        tabs.forEach(t => {
-            const section = document.getElementById(`tab-${t}`);
-            const btn = document.getElementById(`nav-${t}`);
-            if (section) section.classList.add('hidden');
-            if (btn) btn.classList.remove('active');
-        });
-
-        // Show selected section
-        const activeSection = document.getElementById(`tab-${tabName}`);
-        const activeBtn = document.getElementById(`nav-${tabName}`);
-        
-        if (activeSection) activeSection.classList.remove('hidden');
-        if (activeBtn) activeBtn.classList.add('active');
-
-        if(tabName === 'history') renderHistory();
+        loadUserData();
     }
 
-    function toggleCustomModel(val) {
-        const customInput = document.getElementById('custom-model-input');
-        if (val === 'custom') {
-            customInput.classList.remove('hidden');
-        } else {
-            customInput.classList.add('hidden');
-        }
+    function loadUserData() {
+        const raw = localStorage.getItem(`stealth_user_${currentUser}`);
+        const data = raw ? JSON.parse(raw) : { 
+            config: { apiKey: getSecret(), model: 'openrouter/free' },
+            history: [] 
+        };
+        
+        window.activeConfig = data.config;
+        window.activeHistory = data.history;
+        
+        document.getElementById('api-key-input').value = window.activeConfig.apiKey;
+        document.getElementById('model-id-input').value = window.activeConfig.model;
+        
+        appendMsg('ai', `Welcome back, **${currentUser}**. Profile loaded.`);
+    }
+
+    function saveUserData() {
+        const data = { config: window.activeConfig, history: window.activeHistory };
+        localStorage.setItem(`stealth_user_${currentUser}`, JSON.stringify(data));
+    }
+
+    // --- APP LOGIC ---
+    function showTab(name) {
+        ['home', 'history', 'settings'].forEach(t => {
+            document.getElementById(`tab-${t}`).classList.add('hidden');
+            document.getElementById(`nav-${t}`).classList.remove('active');
+        });
+        document.getElementById(`tab-${name}`).classList.remove('hidden');
+        document.getElementById(`nav-${name}`).classList.add('active');
+        if(name === 'history') renderHistory();
     }
 
     function saveSettings() {
-        const selectedModel = document.getElementById('model-select').value;
-        const customModel = document.getElementById('custom-model-input').value;
-        
-        config.apiKey = document.getElementById('api-key-input').value;
-        config.model = selectedModel === 'custom' ? customModel : selectedModel;
-        
-        localStorage.setItem('stealth_config', JSON.stringify(config));
-        alert("Settings Applied Successfully.");
-        location.reload(); 
+        window.activeConfig.apiKey = document.getElementById('api-key-input').value;
+        window.activeConfig.model = document.getElementById('model-id-input').value;
+        saveUserData();
+        alert("Profile updated.");
     }
 
-    function parseMarkdown(text) {
-        if(!text) return "";
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-            .replace(/\*(.*?)\*/g, '<i>$1</i>')
-            .replace(/\n/g, '<br>');
+    function clearUserHistory() {
+        if(confirm("Delete all history for this profile?")) {
+            window.activeHistory = [];
+            saveUserData();
+            renderHistory();
+        }
     }
+
+    function logout() { location.reload(); }
 
     async function handleSend() {
         const input = document.getElementById('user-input');
@@ -232,22 +206,20 @@
             const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: { 
-                    "Authorization": `Bearer ${config.apiKey}`, 
+                    "Authorization": `Bearer ${window.activeConfig.apiKey}`, 
                     "Content-Type": "application/json",
                     "HTTP-Referer": "http://localhost:3000"
                 },
-                body: JSON.stringify({ 
-                    model: config.model, 
-                    messages: [{ role: "user", content: text }] 
-                })
+                body: JSON.stringify({ model: window.activeConfig.model, messages: [{ role: "user", content: text }] })
             });
             const data = await res.json();
             const reply = data.choices[0].message.content;
+            appendMsg('ai', reply);
             
-            formatAndAppendAI(reply);
-            saveToHistory(text, reply);
+            window.activeHistory.unshift({ user: text, ai: reply, time: new Date().toLocaleTimeString() });
+            saveUserData();
         } catch (e) {
-            appendMsg('ai', "❌ **ERROR**: Check API key and internet connection.");
+            appendMsg('ai', "❌ Communication Failure.");
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
@@ -257,75 +229,21 @@
         const win = document.getElementById('chat-window');
         const d = document.createElement('div');
         d.className = `message ${sender}`;
-        d.innerHTML = parseMarkdown(text);
+        d.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
         win.appendChild(d);
         win.scrollTop = win.scrollHeight;
     }
 
-    function formatAndAppendAI(text) {
-        const win = document.getElementById('chat-window');
-        const container = document.createElement('div');
-        container.className = 'message ai';
-        
-        const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
-        let lastIndex = 0; let match;
-
-        while ((match = codeRegex.exec(text)) !== null) {
-            const preText = text.substring(lastIndex, match.index);
-            if (preText) {
-                const span = document.createElement('span');
-                span.innerHTML = parseMarkdown(preText);
-                container.appendChild(span);
-            }
-            const lang = match[1] || 'CODE';
-            const code = match[2];
-            const codeBox = document.createElement('div');
-            codeBox.className = 'code-container';
-            codeBox.innerHTML = `
-                <div class="code-header">
-                    <span>${lang.toUpperCase()}</span>
-                    <span style="cursor:pointer; color:var(--accent)" onclick="navigator.clipboard.writeText(\`${code.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">COPY</span>
-                </div>
-                <div class="code-content">${code}</div>
-            `;
-            container.appendChild(codeBox);
-            lastIndex = codeRegex.lastIndex;
-        }
-
-        const postText = text.substring(lastIndex);
-        if (postText) {
-            const span = document.createElement('span');
-            span.innerHTML = parseMarkdown(postText);
-            container.appendChild(span);
-        }
-
-        win.appendChild(container);
-        win.scrollTop = win.scrollHeight;
-    }
-
-    function saveToHistory(u, a) {
-        chatHistory.unshift({ id: Date.now(), user: u, ai: a, time: new Date().toLocaleTimeString() });
-        localStorage.setItem('stealth_history', JSON.stringify(chatHistory.slice(0, 15)));
-    }
-
     function renderHistory() {
         const list = document.getElementById('history-list');
-        list.innerHTML = chatHistory.length === 0 ? '<p style="text-align:center; color:#555;">Logs empty.</p>' : '';
-        chatHistory.forEach(item => {
-            const div = document.createElement('div');
-            div.style.cssText = "background:var(--card); padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #222; cursor:pointer;";
-            div.innerHTML = `<span style="color:var(--accent); font-size:10px;">${item.time}</span><br><b>Prompt:</b> ${item.user.substring(0,40)}...`;
-            div.onclick = () => {
-                const win = document.getElementById('chat-window');
-                win.innerHTML = '';
-                appendMsg('user', item.user);
-                formatAndAppendAI(item.ai);
-                showTab('home');
-            };
-            list.appendChild(div);
+        list.innerHTML = window.activeHistory.length === 0 ? '<p>No logs found.</p>' : '';
+        window.activeHistory.forEach(item => {
+            const d = document.createElement('div');
+            d.style.cssText = "background:var(--card); padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #222;";
+            d.innerHTML = `<small style="color:var(--accent)">${item.time}</small><br><b>Q:</b> ${item.user.substring(0,30)}...`;
+            list.appendChild(d);
         });
     }
 </script>
-
 </body>
 </html>
