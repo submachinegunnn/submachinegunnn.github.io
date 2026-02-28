@@ -1,8 +1,7 @@
-/* Place this in your root directory as uv.sw.js
-*/
+/* This file goes in your ROOT folder */
 importScripts('/uv/uv.bundle.js');
-importScripts('/uv/uv.config.js');
-importScripts('/uv/uv.sw.js');
+importScripts('/uv.config.js');
+importScripts('/uv/uv.sw.js'); // <--- This points to the library, NOT the root file.
 
 const sw = new UVServiceWorker();
 
