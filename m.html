@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purple Pulse</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <div class="logo">PURPLE<span>PULSE</span></div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search millions of songs...">
+            <button id="searchBtn"><i class="fas fa-search"></i></button>
+            <label for="fileUpload" class="usb-btn"><i class="fas fa-usb"></i> USB</label>
+            <input type="file" id="fileUpload" accept="audio/*" multiple style="display:none;">
+        </div>
+    </header>
+
+    <main id="musicContainer">
+        <div class="loader-text">Ready for some beats? Search above!</div>
+    </main>
+
+    <footer class="player" id="mainPlayer">
+        <div class="progress-area">
+            <span id="currentTime">0:00</span>
+            <input type="range" id="timeSlider" value="0" min="0" max="100">
+            <span id="durationTime">0:00</span>
+        </div>
+
+        <div class="controls-container">
+            <div class="track-details">
+                <img id="trackArt" src="" alt="">
+                <div class="text">
+                    <div id="trackTitle">Nothing Playing</div>
+                    <div id="trackArtist">Select a track</div>
+                </div>
+            </div>
+
+            <div class="main-controls">
+                <button id="shuffleBtn" title="Shuffle"><i class="fas fa-random"></i></button>
+                <button id="playPauseBtn"><i class="fas fa-play"></i></button>
+                <button id="repeatBtn" title="Repeat"><i class="fas fa-redo"></i></button>
+                <a id="downloadBtn" href="#" target="_blank" class="dl-icon" title="Open Link"><i class="fas fa-external-link-alt"></i></a>
+            </div>
+
+            <div class="volume-box">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.7">
+            </div>
+        </div>
+    </footer>
+
+    <audio id="audioPlayer"></audio>
+    <script src="script.js"></script>
+</body>
+</html>
