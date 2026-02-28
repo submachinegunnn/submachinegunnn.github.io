@@ -5,7 +5,7 @@
     <title>Stealth | Browser</title>
     <style>
         :root { --bg: #050505; --accent: #A020F0; --panel: #111; --text: #eee; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; margin: 0; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow: hidden; }
         
         .browser-ui { display: flex; flex-direction: column; height: 100vh; }
         
@@ -14,29 +14,27 @@
         .tab { 
             background: var(--panel); padding: 8px 15px; border-radius: 6px 6px 0 0; 
             font-size: 12px; cursor: pointer; border: 1px solid #222; border-bottom: none; 
-            min-width: 120px; display: flex; justify-content: space-between; align-items: center;
-            transition: 0.2s;
+            min-width: 130px; display: flex; justify-content: space-between; align-items: center;
         }
         .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
-        .tab:hover:not(.active) { background: #222; }
-        .add-tab { background: none; border: none; color: white; cursor: pointer; font-size: 22px; padding: 0 10px 5px; }
+        .add-tab { background: none; border: none; color: white; cursor: pointer; font-size: 22px; padding-bottom: 5px; }
 
-        /* Navigation Bar */
+        /* Nav Bar */
         .nav-bar { display: flex; padding: 10px; gap: 10px; background: var(--panel); align-items: center; border-bottom: 1px solid #222; }
-        input { 
-            flex: 1; background: #000; border: 1px solid #333; color: white; 
-            padding: 10px 20px; border-radius: 20px; outline: none; transition: 0.3s;
-        }
-        input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(160, 32, 240, 0.2); }
+        input { flex: 1; background: #000; border: 1px solid #333; color: white; padding: 10px 20px; border-radius: 20px; outline: none; }
+        input:focus { border-color: var(--accent); }
         
         /* Status Indicator */
         .status-box { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-left: auto; padding-right: 10px; }
-        #status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; box-shadow: 0 0 5px #ff4444; }
+        #status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; }
 
-        /* Content Area */
-        .view-container { flex: 1; position: relative; background: #fff; }
-        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none; }
-        iframe.active { display: block; }
+        /* Iframe Container */
+        .view-container { flex: 1; position: relative; background: white; }
+        iframe { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            border: none; display: none; background: white; z-index: 1;
+        }
+        iframe.active { display: block; z-index: 10; }
     </style>
 </head>
 <body>
@@ -45,15 +43,14 @@
             <button class="add-tab" onclick="createNewTab()">+</button>
             <div class="status-box">
                 <div id="status-dot"></div>
-                <span id="status-text">Engine Offline</span>
+                <span id="status-text">Proxy Offline</span>
             </div>
         </div>
         <div class="nav-bar">
-            <button onclick="reloadCurrent()" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">🔄</button>
-            <input type="text" id="url-input" placeholder="Search Google or enter a URL...">
+            <button onclick="reloadCurrent()" style="background:none; border:none; color:white; cursor:pointer;">🔄</button>
+            <input type="text" id="url-input" placeholder="Search or enter URL...">
         </div>
-        <div class="view-container" id="view-container">
-            </div>
+        <div class="view-container" id="view-container"></div>
     </div>
 
     <script src="/uv/uv.bundle.js"></script>
@@ -65,26 +62,19 @@
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
-        // 2. The critical Service Worker Registration
         async function initProxy() {
             if ('serviceWorker' in navigator) {
                 try {
-                    await navigator.serviceWorker.register('/uv.sw.js', {
-                        scope: __uv$config.prefix
-                    });
-                    
-                    // Verify if the controller is active
+                    await navigator.serviceWorker.register('/uv.sw.js', { scope: __uv$config.prefix });
                     if (navigator.serviceWorker.controller) {
                         statusDot.style.background = '#00ff88';
-                        statusDot.style.boxShadow = '0 0 8px #00ff88';
-                        statusText.innerText = 'Engine Ready';
+                        statusText.innerText = 'Proxy Ready';
                     } else {
-                        statusText.innerText = 'Refreshing Engine...';
-                        location.reload(); // Hard reload once to claim the SW
+                        statusText.innerText = 'Syncing...';
+                        location.reload(); 
                     }
                 } catch (err) {
-                    statusText.innerText = 'Engine Error';
-                    console.error("SW Register Failed:", err);
+                    statusText.innerText = 'Proxy Error';
                 }
             }
         }
@@ -92,27 +82,24 @@
         function createNewTab() {
             tabCount++;
             const id = `frame-${tabCount}`;
-            
-            // Create Tab Element
             const tab = document.createElement('div');
             tab.className = 'tab';
             tab.id = `tab-${id}`;
-            tab.innerHTML = `<span>New Tab</span> <span style="margin-left:10px;opacity:0.5" onclick="closeTab(event, '${id}')">×</span>`;
+            tab.innerHTML = `<span>New Tab</span> <span style="margin-left:10px;" onclick="closeTab(event, '${id}')">×</span>`;
             tab.onclick = () => switchTab(id);
             document.getElementById('tab-bar').insertBefore(tab, document.querySelector('.add-tab'));
 
-            // Create Iframe Element
             const frame = document.createElement('iframe');
             frame.id = id;
+            // This ensures the iframe starts with a blank page rather than "nothing"
+            frame.src = 'about:blank';
             document.getElementById('view-container').appendChild(frame);
-
             switchTab(id);
         }
 
         function switchTab(id) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
-            
             document.getElementById(`tab-${id}`).classList.add('active');
             const activeFrame = document.getElementById(id);
             activeFrame.classList.add('active');
@@ -123,8 +110,8 @@
             e.stopPropagation();
             document.getElementById(`tab-${id}`).remove();
             document.getElementById(id).remove();
-            const remaining = document.querySelectorAll('.tab');
-            if (remaining.length > 0) switchTab(remaining[remaining.length - 1].id.replace('tab-', ''));
+            const tabs = document.querySelectorAll('.tab');
+            if (tabs.length > 0) switchTab(tabs[tabs.length-1].id.replace('tab-', ''));
         }
 
         function reloadCurrent() {
@@ -144,14 +131,21 @@
                 const frame = document.querySelector('iframe.active');
                 if (frame) {
                     frame.dataset.url = url;
-                    // Encoding the URL via Ultraviolet
-                    frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
-                    document.querySelector(`#tab-${frame.id} span`).innerText = "Loading...";
+                    // Apply encoded URL
+                    const encodedUrl = __uv$config.prefix + __uv$config.encodeUrl(url);
+                    frame.src = encodedUrl;
+                    
+                    const tabSpan = document.querySelector(`#tab-${frame.id} span`);
+                    tabSpan.innerText = "Loading...";
+                    
+                    // Simple title update once loaded
+                    frame.onload = () => {
+                        tabSpan.innerText = url.split('/')[2] || "Page Loaded";
+                    };
                 }
             }
         });
 
-        // Initialize
         window.onload = async () => {
             await initProxy();
             createNewTab();
