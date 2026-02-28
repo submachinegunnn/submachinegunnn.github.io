@@ -3,162 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stealth OS | Dashboard</title>
+    <title>Stealth OS</title>
     <style>
-        :root {
-            --bg: #050505;
-            --panel: #111111;
-            --accent: #A020F0; /* Purple accent */
-            --text: #ffffff;
-            --subtext: #888;
+        :root { --accent: #A020F0; --bg: #050505; --panel: #111; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+
+        /* Main Viewport for Iframes */
+        .content-wrapper { width: 100vw; height: 100vh; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; display: none; background: var(--bg); }
+        iframe.active { display: block; }
+
+        /* Floating Action Button (Bottom Left) */
+        .menu-container {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 9999;
         }
 
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', -apple-system, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1000px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--panel);
-            border: 1px solid #222;
-            border-radius: 16px;
-            padding: 24px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .card:hover {
-            border-color: var(--accent);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(160, 32, 240, 0.1);
-        }
-
-        .card h2 {
-            margin: 0 0 8px 0;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .card p {
-            color: var(--subtext);
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 20px;
-        }
-
-        .status {
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .online { color: #00ff88; }
-        .pulse {
-            width: 8px;
-            height: 8px;
-            background: #00ff88;
+        .main-fab {
+            width: 60px;
+            height: 60px;
+            background: var(--accent);
             border-radius: 50%;
-            box-shadow: 0 0 8px #00ff88;
-            animation: pulse 2s infinite;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(160, 32, 240, 0.4);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.5); opacity: 0.5; }
-            100% { transform: scale(1); opacity: 1; }
+        .main-fab:hover { transform: scale(1.1); }
+        .main-fab.open { transform: rotate(45deg); background: #333; }
+
+        /* Expanding Options */
+        .fab-options {
+            position: absolute;
+            bottom: 70px;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(20px);
         }
 
-        .icon { font-size: 2rem; margin-bottom: 10px; }
-
-        .header {
-            grid-column: 1 / -1;
-            text-align: left;
-            margin-bottom: 10px;
+        .fab-options.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
         }
 
-        .header h1 { font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
-        .header span { color: var(--accent); }
+        .option-btn {
+            width: 50px;
+            height: 50px;
+            background: var(--panel);
+            border: 1px solid #333;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: 0.2s;
+        }
+
+        .option-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        /* Tooltip style labels */
+        .option-btn::after {
+            content: attr(data-label);
+            position: absolute;
+            left: 60px;
+            background: rgba(0,0,0,0.8);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .option-btn:hover::after { opacity: 1; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>STEALTH<span>PRO</span></h1>
-        <p style="color: var(--subtext);">System initialized. All modules operational.</p>
+<div class="menu-container">
+    <div class="fab-options" id="fab-menu">
+        <button class="option-btn" data-label="Settings" onclick="loadPage('settings')">⚙️</button>
+        <button class="option-btn" data-label="Proxy" onclick="loadPage('proxy')">🌐</button>
+        <button class="option-btn" data-label="Music" onclick="loadPage('music')">🎵</button>
+        <button class="option-btn" data-label="AI Chat" onclick="loadPage('ai')">🤖</button>
+        <button class="option-btn" data-label="Home" onclick="loadPage('home')">🏠</button>
     </div>
+    <button class="main-fab" id="main-btn" onclick="toggleMenu()">🏠</button>
+</div>
 
-    <a href="ai.html" class="card">
-        <div class="icon">🤖</div>
-        <h2>Neural AI</h2>
-        <p>Access the public OpenRouter AI. Zero logs, full context.</p>
-        <div class="status online"><div class="pulse"></div> Operational</div>
-    </a>
-
-    <a href="https://stealthaipro.onrender.com/a.html" target="_blank" class="card">
-        <div class="icon">🌐</div>
-        <h2>Web Proxy</h2>
-        <p>Encrypted tunneling via Render. Bypass filters and browse securely.</p>
-        <div class="status" id="proxy-status" style="color: #ffaa00;">Checking...</div>
-    </a>
-
-    <a href="m.html" class="card">
-        <div class="icon">🎵</div>
-        <h2>Audio Stream</h2>
-        <p>Private music player and YouTube bridge. Background play enabled.</p>
-        <div class="status online"><div class="pulse"></div> Ready</div>
-    </a>
-
-    <div class="card" onclick="alert('System Settings Locked')">
-        <div class="icon">⚙️</div>
-        <h2>Core System</h2>
-        <p>Configure API endpoints, clear local history, and manage panic keys.</p>
-        <div class="status" style="color: var(--subtext);">Encrypted</div>
-    </div>
+<div class="content-wrapper">
+    <iframe id="frame-home" class="active" src="dashboard.html"></iframe>
+    <iframe id="frame-ai" src="ai.html"></iframe>
+    <iframe id="frame-music" src="music.html"></iframe>
+    <iframe id="frame-proxy" src="https://your-render-proxy.onrender.com"></iframe>
+    <iframe id="frame-settings" src="settings.html"></iframe>
 </div>
 
 <script>
-    // Simple Ping to check if Render Proxy is awake
-    async function checkProxy() {
-        const proxyUrl = "https://stealthaipro.onrender.com"; 
-        const statusEl = document.getElementById('proxy-status');
-        
-        try {
-            // Use no-cors to avoid blocking while checking if server is up
-            await fetch(proxyUrl, { mode: 'no-cors' });
-            statusEl.innerHTML = '<div class="pulse"></div> Online';
-            statusEl.style.color = "#00ff88";
-        } catch (e) {
-            statusEl.innerText = "Sleeping (Wake on Click)";
-            statusEl.style.color = "#ffaa00";
-        }
+    function toggleMenu() {
+        const menu = document.getElementById('fab-menu');
+        const btn = document.getElementById('main-btn');
+        menu.classList.toggle('show');
+        btn.classList.toggle('open');
+        // Change icon to 'X' when open
+        btn.innerText = btn.classList.contains('open') ? '✕' : '🏠';
     }
 
-    checkProxy();
+    function loadPage(id) {
+        // Hide all frames
+        document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
+        // Show selected frame
+        document.getElementById('frame-' + id).classList.add('active');
+        // Close menu after selection
+        toggleMenu();
+    }
+
+    // Close menu if user clicks outside
+    window.onclick = function(event) {
+        if (!event.target.matches('.main-fab') && !event.target.matches('.option-btn')) {
+            document.getElementById('fab-menu').classList.remove('show');
+            const btn = document.getElementById('main-btn');
+            btn.classList.remove('open');
+            btn.innerText = '🏠';
+        }
+    }
 </script>
 
 </body>
